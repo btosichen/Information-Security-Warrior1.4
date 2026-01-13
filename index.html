@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>資安勇者：校園資料守護戰v1.42</title>
+    <title>資安勇者：校園資料守護戰v1.43</title>
     <!-- 
         GitHub Pages 部署 3 步驟：
         1. 建立 GitHub Repository。
@@ -675,6 +675,7 @@ const memoryGame = {
     },
 
     start() {
+        clearInterval(this.interval); // 清除舊計時器
         document.getElementById('mem-start-overlay').innerHTML = `
             <h3 style="color:var(--primary)">🧠 最終試煉：個資記憶殿堂</h3>
             <p style="margin:10px 0; color:#555;">翻牌配對正確的「名詞」與「定義/範例」。<br>共 20 張牌 (10對)，限時 60 秒！</p>
@@ -687,7 +688,7 @@ const memoryGame = {
         this.score = 0;
         this.timer = 60;
         this.flippedCards = [];
-        this.isLocked = false;
+        this.isLocked = true; // 預覽期間鎖定操作
         
         // Create 20 cards (10 pairs)
         let deck = [];
@@ -716,18 +717,49 @@ const memoryGame = {
             card.appendChild(front);
             card.appendChild(back);
             
+            // 初始翻牌
+            card.classList.add('flipped');
+            
             card.onclick = () => this.flipCard(card);
             grid.appendChild(card);
         });
 
-        // Timer
-        this.interval = setInterval(() => {
-            this.timer--;
-            document.getElementById('mem-timer').textContent = `時間: ${this.timer}s`;
-            if (this.timer <= 0) this.end(false);
+        // 預覽倒數 3 秒
+        let previewTime = 3;
+        const timerDisplay = document.getElementById('mem-timer');
+        timerDisplay.textContent = `記憶時間: ${previewTime}`;
+        timerDisplay.style.color = '#ef4444'; // 紅色強調
+
+        const previewInterval = setInterval(() => {
+            previewTime--;
+            if (previewTime > 0) {
+                timerDisplay.textContent = `記憶時間: ${previewTime}`;
+            } else {
+                clearInterval(previewInterval);
+                this.beginGame();
+            }
         }, 1000);
         
         document.getElementById('mem-score').textContent = `配對: 0/10`;
+    },
+
+    beginGame() {
+        const timerDisplay = document.getElementById('mem-timer');
+        timerDisplay.style.color = ''; // 恢復顏色
+        timerDisplay.textContent = `時間: ${this.timer}s`;
+        
+        // 蓋牌
+        const cards = document.querySelectorAll('.memory-card');
+        cards.forEach(c => c.classList.remove('flipped'));
+        
+        this.isLocked = false; // 解除鎖定
+        
+        // 開始正式計時
+        this.interval = setInterval(() => {
+            this.timer--;
+            timerDisplay.textContent = `時間: ${this.timer}s`;
+            if (this.timer <= 0) this.end(false);
+        }, 1000);
     },
 
     flipCard(card) {

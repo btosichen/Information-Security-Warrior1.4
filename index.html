@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>資安勇者：校園資料守護戰v1.43</title>
+    <title>資安勇者：校園資料守護戰v1.44</title>
     <!-- 
         GitHub Pages 部署 3 步驟：
         1. 建立 GitHub Repository。
@@ -275,13 +275,13 @@
             <!-- 記憶配對遊戲區域 -->
             <div id="memory-game-container">
                 <div class="memory-info">
-                    <span id="mem-timer">時間: 60s</span>
+                    <span id="mem-timer">時間: 90s</span>
                     <span id="mem-score">配對: 0/10</span>
                 </div>
                 <!-- 遮罩說明 -->
                 <div id="mem-start-overlay" style="background:#f0f9ff; padding:20px; border-radius:8px; text-align:center; border:2px dashed var(--primary); margin-bottom:20px;">
                     <h3 style="color:var(--primary)">🧠 最終試煉：個資記憶殿堂</h3>
-                    <p style="margin:10px 0; color:#555;">翻牌配對正確的「名詞」與「定義/範例」。<br>共 20 張牌 (10對)，限時 60 秒！</p>
+                    <p style="margin:10px 0; color:#555;">翻牌配對正確的「名詞」與「定義/範例」。<br>共 20 張牌 (10對)，限時 90 秒！</p>
                     <button class="btn" style="width:auto" onclick="memoryGame.start()">開始挑戰</button>
                 </div>
                 
@@ -662,7 +662,7 @@ const memoryGame = {
         { term: "更正權", desc: "修改不正確資料" },
         { term: "刪除權", desc: "請求停止利用或刪除" }
     ],
-    timer: 60,
+    timer: 90,
     matches: 0,
     score: 0,
     cards: [],
@@ -678,7 +678,7 @@ const memoryGame = {
         clearInterval(this.interval); // 清除舊計時器
         document.getElementById('mem-start-overlay').innerHTML = `
             <h3 style="color:var(--primary)">🧠 最終試煉：個資記憶殿堂</h3>
-            <p style="margin:10px 0; color:#555;">翻牌配對正確的「名詞」與「定義/範例」。<br>共 20 張牌 (10對)，限時 60 秒！</p>
+            <p style="margin:10px 0; color:#555;">翻牌配對正確的「名詞」與「定義/範例」。<br>共 20 張牌 (10對)，限時 90 秒！</p>
             <button class="btn" style="width:auto" onclick="memoryGame.start()">開始挑戰</button>
         `;
         document.getElementById('mem-start-overlay').style.display = 'none';
@@ -686,7 +686,7 @@ const memoryGame = {
         grid.innerHTML = '';
         this.matches = 0;
         this.score = 0;
-        this.timer = 60;
+        this.timer = 90;
         this.flippedCards = [];
         this.isLocked = true; // 預覽期間鎖定操作
         

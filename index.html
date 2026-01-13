@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>資安勇者：校園資料守護戰</title>
+    <title>資安勇者：校園資料守護戰v1.41</title>
     <!-- 
         GitHub Pages 部署 3 步驟：
         1. 建立 GitHub Repository。
@@ -29,7 +29,7 @@
         body { font-family: var(--font-main); background: var(--bg-gradient); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 10px; }
         
         /* Containers */
-        .container { width: 100%; max-width: 600px; position: relative; }
+        .container { width: 100%; max-width: 800px; position: relative; } /* 放寬寬度以容納卡牌 */
         .screen { display: none; animation: fadeIn 0.4s ease; }
         .screen.active { display: block; }
         
@@ -84,7 +84,7 @@
         .option-btn:hover { border-color: var(--primary); background: #eef2ff; }
         .option-btn.hidden-opt { display: none; }
 
-        /* Mini Game Styles */
+        /* Mini Game Styles (Whack-a-Mole) */
         #minigame-container {
             position: relative;
             width: 100%;
@@ -97,36 +97,63 @@
             margin-bottom: 20px;
             cursor: crosshair;
         }
-        #minigame-canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
+        #minigame-canvas { display: block; width: 100%; height: 100%; }
         .minigame-ui {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            display: flex;
-            justify-content: space-between;
-            color: white;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px black;
-            pointer-events: none;
-            z-index: 2;
+            position: absolute; top: 10px; left: 10px; right: 10px;
+            display: flex; justify-content: space-between;
+            color: white; font-weight: bold; text-shadow: 1px 1px 2px black;
+            pointer-events: none; z-index: 2;
         }
         .minigame-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            z-index: 3;
-            text-align: center;
-            padding: 20px;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.85); color: white; z-index: 3;
+            text-align: center; padding: 20px;
+        }
+
+        /* Memory Game Styles */
+        #memory-game-container {
+            display: none;
+            margin-top: 20px;
+        }
+        .memory-info {
+            display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; color: var(--primary);
+        }
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr); /* 6 cols for desktop */
+            gap: 8px;
+            perspective: 1000px;
+        }
+        .memory-card {
+            background-color: transparent;
+            width: 100%;
+            aspect-ratio: 3/4;
+            cursor: pointer;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s;
+        }
+        .memory-card.flipped { transform: rotateY(180deg); }
+        .memory-card.matched { visibility: hidden; pointer-events: none; opacity: 0; transition: opacity 0.5s; }
+        
+        .memory-face {
+            position: absolute; width: 100%; height: 100%;
+            backface-visibility: hidden;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 8px;
+            padding: 5px; text-align: center;
+            font-size: 0.75rem; /* Small font for content */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 2px solid #ddd;
+        }
+        .memory-front { background: white; transform: rotateY(180deg); color: #333; font-weight: bold; overflow: hidden; }
+        .memory-back { background: var(--primary); color: white; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; }
+        
+        /* Mobile adjustment for grid */
+        @media (max-width: 600px) {
+            .memory-grid { grid-template-columns: repeat(5, 1fr); } /* 5 cols on mobile */
+            .memory-face { font-size: 0.65rem; }
         }
 
         /* Animations */
@@ -245,6 +272,22 @@
                 </div>
             </div>
 
+            <!-- 記憶配對遊戲區域 -->
+            <div id="memory-game-container">
+                <div class="memory-info">
+                    <span id="mem-timer">時間: 60s</span>
+                    <span id="mem-score">配對: 0/15</span>
+                </div>
+                <!-- 遮罩說明 -->
+                <div id="mem-start-overlay" style="background:#f0f9ff; padding:20px; border-radius:8px; text-align:center; border:2px dashed var(--primary); margin-bottom:20px;">
+                    <h3 style="color:var(--primary)">🧠 最終試煉：個資記憶殿堂</h3>
+                    <p style="margin:10px 0; color:#555;">翻牌配對正確的「名詞」與「定義/範例」。<br>共 30 張牌 (15對)，限時 60 秒！</p>
+                    <button class="btn" style="width:auto" onclick="memoryGame.start()">開始挑戰</button>
+                </div>
+                
+                <div class="memory-grid" id="memory-grid"></div>
+            </div>
+
             <!-- 題目區 -->
             <div class="question-area" id="quiz-area" style="display:none;">
                 <div class="q-text" id="q-text">題目文字</div>
@@ -266,7 +309,7 @@
             
             <div style="margin: 20px 0; font-size: 1.2rem;">
                 <p>總分：<span id="final-score" style="color:var(--primary); font-weight:bold;">0</span></p>
-                <p id="final-minigame-score" style="display:none; color: #fbbf24; font-weight: bold;">小遊戲得分：0</p>
+                <p id="final-minigame-score" style="display:none; font-size:0.9rem; color:#555;">打地鼠: 0 | 記憶翻牌: 0</p>
                 <p>正確率：<span id="final-accuracy">0%</span></p>
                 <p>耗時：<span id="final-time">0s</span></p>
             </div>
@@ -415,9 +458,9 @@ const QUESTION_POOL = [
 ];
 
 /**
- * 遊戲劇情文本 (10 關結構)
+ * 遊戲劇情文本 (10 關結構 + 第 11 關記憶遊戲)
  * 增加 quiz 物件，用於 NPC 互動小測驗
- * 增加 special: 'shooting'，用於第5關觸發射擊小遊戲
+ * special: 'shooting' (第5關), 'memory' (第11關)
  */
 const GAME_SCENARIOS = [
     { 
@@ -449,7 +492,7 @@ const GAME_SCENARIOS = [
         text: '警告！圖書館系統正遭受大規模漏洞攻擊！這不是演習！', 
         npc: '資安精靈', 
         msg: '勇者！防火牆偵測到許多安全漏洞，請幫忙修補漏洞，並清除威脅！', 
-        special: 'shooting', // 標記為射擊遊戲關卡 (名稱保留 shooting 但玩法改為打地鼠)
+        special: 'shooting', 
         quiz: { options: ['啟動防禦系統', '我需要支援'], answer: '啟動防禦系統' }
     },
     { 
@@ -481,53 +524,39 @@ const GAME_SCENARIOS = [
         npc: '資安精靈', 
         msg: '守護者，這是最後一關，你準備好面對挑戰了嗎？', 
         quiz: { options: ['我準備好了！', '再等一下'], answer: '我準備好了！' }
+    },
+    // 第 11 關：記憶翻牌遊戲
+    { 
+        text: '恭喜通過所有考驗！但要成為真正的守護者，必須將「個資保護原則」銘記在心。進入記憶殿堂吧！', 
+        npc: '資安精靈', 
+        msg: '這是最後的試煉！將 30 張卡牌正確配對，證明你對個資法的理解！', 
+        special: 'memory', 
+        quiz: { options: ['我準備好了！', '好緊張'], answer: '我準備好了！' }
     }
 ];
 
 // 打地鼠遊戲邏輯模組
-const MiniGame = {
-    canvas: null,
-    ctx: null,
-    isActive: false,
-    score: 0,
-    timer: 20,
-    holes: [], // {x, y, radius}
-    activeMoles: [], // {holeIndex, text, isBad, spawnTime, duration}
-    lastSpawn: 0,
-    spawnRate: 900, // ms
-    animationFrame: null,
-    timerInterval: null,
-    
-    // 定義目標詞彙 (Bad = 紅色可射擊, Good = 綠色不可射擊)
+const miniGame = {
+    canvas: null, ctx: null, isActive: false, score: 0, timer: 20,
+    holes: [], activeMoles: [], lastSpawn: 0, spawnRate: 900, animationFrame: null, timerInterval: null,
     badTerms: ['病毒', '釣魚信', '勒索軟體', '弱密碼', '木馬', '惡意連結', '詐騙簡訊', '假Wifi'],
     goodTerms: ['HTTPS', '防火牆', '強密碼', '定期備份', '雙重驗證', '系統更新', '加密傳輸'],
 
     init() {
         this.canvas = document.getElementById('minigame-canvas');
         this.ctx = this.canvas.getContext('2d');
-        
-        // 定義 3x3 坑洞位置
         this.holes = [];
-        const cols = 3;
-        const rows = 3;
-        // 畫布寬高假定 600x400
+        const cols = 3; const rows = 3;
         const xStep = this.canvas.width / cols;
-        const yStep = (this.canvas.height - 60) / rows; // 留上面一點空間給UI
-        
+        const yStep = (this.canvas.height - 60) / rows;
         for(let r=0; r<rows; r++) {
             for(let c=0; c<cols; c++) {
-                this.holes.push({
-                    x: xStep * c + xStep/2,
-                    y: 60 + yStep * r + yStep/2,
-                    radius: 40
-                });
+                this.holes.push({ x: xStep * c + xStep/2, y: 60 + yStep * r + yStep/2, radius: 40 });
             }
         }
-
-        // 綁定點擊事件 (支援滑鼠與觸控)
         this.canvas.addEventListener('mousedown', (e) => this.handleClick(e));
         this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // 防止滾動
+            e.preventDefault();
             const touch = e.touches[0];
             const rect = this.canvas.getBoundingClientRect();
             this.shoot(touch.clientX - rect.left, touch.clientY - rect.top);
@@ -535,104 +564,56 @@ const MiniGame = {
     },
 
     start() {
-        this.isActive = true;
-        this.score = 0;
-        this.timer = 20; // 20秒
-        this.activeMoles = [];
-        this.lastSpawn = 0;
-        this.spawnRate = 900;
-        
+        this.isActive = true; this.score = 0; this.timer = 20;
+        this.activeMoles = []; this.lastSpawn = 0; this.spawnRate = 900;
         document.getElementById('mg-start-overlay').style.display = 'none';
         document.getElementById('mg-end-overlay').style.display = 'none';
-        
-        // 倒數計時
         this.timerInterval = setInterval(() => {
             this.timer--;
             document.getElementById('mg-timer').textContent = `時間: ${this.timer}s`;
             if (this.timer <= 0) this.end();
         }, 1000);
-
         this.loop();
     },
 
     loop() {
         if (!this.isActive) return;
-
         const now = Date.now();
-
-        // 生成目標 (若時間到了且還沒滿)
         if (now - this.lastSpawn > this.spawnRate) {
             this.spawnTarget();
             this.lastSpawn = now;
-            // 隨時間加快生成速度 (最快 500ms)
             if (this.spawnRate > 500) this.spawnRate -= 20;
         }
-
         this.update(now);
         this.draw();
-
         this.animationFrame = requestAnimationFrame(() => this.loop());
     },
 
     spawnTarget() {
-        // 找出目前空的洞
         const busyIndices = this.activeMoles.map(m => m.holeIndex);
         const freeIndices = this.holes.map((_, i) => i).filter(i => !busyIndices.includes(i));
-        
-        if (freeIndices.length === 0) return; // 沒空洞就不生
-
-        // 隨機選一個洞
+        if (freeIndices.length === 0) return;
         const idx = freeIndices[Math.floor(Math.random() * freeIndices.length)];
-        const isBad = Math.random() > 0.4; // 60% 機率是壞蛋
-        const text = isBad 
-            ? this.badTerms[Math.floor(Math.random() * this.badTerms.length)] 
-            : this.goodTerms[Math.floor(Math.random() * this.goodTerms.length)];
-        
-        this.activeMoles.push({
-            holeIndex: idx,
-            text,
-            isBad,
-            spawnTime: Date.now(),
-            duration: Math.random() * 800 + 800 // 停留 0.8s ~ 1.6s
-        });
+        const isBad = Math.random() > 0.4;
+        const text = isBad ? this.badTerms[Math.floor(Math.random() * this.badTerms.length)] : this.goodTerms[Math.floor(Math.random() * this.goodTerms.length)];
+        this.activeMoles.push({ holeIndex: idx, text, isBad, spawnTime: Date.now(), duration: Math.random() * 800 + 800 });
     },
 
-    update(now) {
-        // 移除過期的地鼠
-        this.activeMoles = this.activeMoles.filter(m => now - m.spawnTime < m.duration);
-    },
+    update(now) { this.activeMoles = this.activeMoles.filter(m => now - m.spawnTime < m.duration); },
 
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-        // 1. 畫坑洞 (背景)
         this.holes.forEach(h => {
-             this.ctx.fillStyle = '#1f2937'; // 深色坑洞
-             this.ctx.beginPath();
-             // 畫一個橢圓當洞
-             this.ctx.ellipse(h.x, h.y + 20, h.radius, h.radius * 0.4, 0, 0, Math.PI*2);
-             this.ctx.fill();
+             this.ctx.fillStyle = '#1f2937'; this.ctx.beginPath();
+             this.ctx.ellipse(h.x, h.y + 20, h.radius, h.radius * 0.4, 0, 0, Math.PI*2); this.ctx.fill();
         });
-
-        // 2. 畫地鼠 (前景)
         this.activeMoles.forEach(m => {
             const h = this.holes[m.holeIndex];
-            
-            // 地鼠本體
-            this.ctx.beginPath();
-            this.ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
-            // 壞蛋是紅色，好人是綠色
+            this.ctx.beginPath(); this.ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
             this.ctx.fillStyle = m.isBad ? '#ef4444' : '#10b981';
-            this.ctx.fill();
-            this.ctx.lineWidth = 3;
-            this.ctx.strokeStyle = '#fff';
-            this.ctx.stroke();
-
-            // 文字
-            this.ctx.fillStyle = '#fff';
-            this.ctx.font = 'bold 14px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
+            this.ctx.fill(); this.ctx.lineWidth = 3; this.ctx.strokeStyle = '#fff'; this.ctx.stroke();
+            this.ctx.fillStyle = '#fff'; this.ctx.font = 'bold 14px Arial';
+            this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
             this.ctx.fillText(m.text, h.x, h.y);
         });
     },
@@ -640,70 +621,167 @@ const MiniGame = {
     handleClick(e) {
         if (!this.isActive) return;
         const rect = this.canvas.getBoundingClientRect();
-        // 計算縮放比例 (因為 CSS 可能縮放 Canvas)
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
-        this.shoot(x, y);
+        const scaleX = this.canvas.width / rect.width; const scaleY = this.canvas.height / rect.height;
+        this.shoot((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
     },
 
     shoot(x, y) {
-        // 檢查是否點到某個存在的地鼠
         for (let i = this.activeMoles.length - 1; i >= 0; i--) {
             const m = this.activeMoles[i];
             const h = this.holes[m.holeIndex];
-            
-            // 簡單判定：點擊點是否在地鼠圓圈內
-            const dist = Math.sqrt((x - h.x) ** 2 + (y - h.y) ** 2);
-            
-            if (dist < h.radius) {
-                // 擊中！
-                
-                if (m.isBad) {
-                    this.score += 10;
-                    // 可以加個特效，這裡簡單處理
-                } else {
-                    this.score -= 10;
-                }
-                
-                // 移除被打到的地鼠
+            if (Math.sqrt((x - h.x) ** 2 + (y - h.y) ** 2) < h.radius) {
+                if (m.isBad) { this.score += 10; } else { this.score -= 10; }
                 this.activeMoles.splice(i, 1);
-                
                 document.getElementById('mg-score').textContent = `得分: ${this.score}`;
-                break; // 一次只打一個
+                break;
             }
         }
     },
 
     end() {
-        this.isActive = false;
-        clearInterval(this.timerInterval);
-        cancelAnimationFrame(this.animationFrame);
-        
+        this.isActive = false; clearInterval(this.timerInterval); cancelAnimationFrame(this.animationFrame);
         const overlay = document.getElementById('mg-end-overlay');
-        const msg = document.getElementById('mg-result-msg');
+        document.getElementById('mg-result-msg').innerHTML = `最終得分：<span style="font-size:1.5rem; color:#fbbf24">${this.score}</span>`;
         overlay.style.display = 'flex';
-        
-        let rank = '';
-        if (this.score >= 100) rank = '資安神盾手！';
-        else if (this.score >= 50) rank = '防禦成功！';
-        else rank = '漏洞還是有點多...';
-
-        msg.innerHTML = `最終得分：<span style="font-size:1.5rem; color:#fbbf24">${this.score}</span><br>${rank}`;
     },
 
-    finish() {
-        // 結束小遊戲，將分數加回主遊戲並進入下一關
-        app.finishMiniGame(this.score);
+    finish() { app.finishMiniGame(this.score, 'minigame_lv5', '打地鼠挑戰'); }
+};
+
+// 記憶配對遊戲邏輯模組
+const memoryGame = {
+    pairs: [
+        { term: "個資定義", desc: "姓名、身分證、病歷" },
+        { term: "敏感個資", desc: "基因、性生活、前科" },
+        { term: "蒐集", desc: "以任何方式取得資料" },
+        { term: "處理", desc: "建立檔案、儲存複製" },
+        { term: "利用", desc: "特定目的外使用" },
+        { term: "告知", desc: "事前說明目的" },
+        { term: "同意", desc: "取得當事人授權" },
+        { term: "查詢權", desc: "閱覽自己的資料" },
+        { term: "複製權", desc: "製給資料複本" },
+        { term: "更正權", desc: "修改不正確資料" },
+        { term: "刪除權", desc: "請求停止利用或刪除" },
+        { term: "特定目的", desc: "蒐集須有明確用途" },
+        { term: "比例原則", desc: "不過度蒐集資料" },
+        { term: "安全維護", desc: "加密與存取控制" },
+        { term: "合法性", desc: "符合法律且必要" }
+    ],
+    timer: 60,
+    matches: 0,
+    score: 0,
+    cards: [],
+    flippedCards: [],
+    isLocked: false,
+    interval: null,
+
+    init() {
+        // Build DOM if not present (handled in HTML)
+    },
+
+    start() {
+        document.getElementById('mem-start-overlay').style.display = 'none';
+        const grid = document.getElementById('memory-grid');
+        grid.innerHTML = '';
+        this.matches = 0;
+        this.score = 0;
+        this.timer = 60;
+        this.flippedCards = [];
+        this.isLocked = false;
+        
+        // Create 30 cards
+        let deck = [];
+        this.pairs.forEach((p, idx) => {
+            deck.push({ id: idx, content: p.term, type: 'term' });
+            deck.push({ id: idx, content: p.desc, type: 'desc' });
+        });
+        
+        // Shuffle
+        deck.sort(() => Math.random() - 0.5);
+        
+        // Render
+        deck.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'memory-card';
+            card.dataset.id = item.id;
+            
+            const front = document.createElement('div');
+            front.className = 'memory-face memory-front';
+            front.textContent = item.content;
+            
+            const back = document.createElement('div');
+            back.className = 'memory-face memory-back';
+            back.textContent = '🛡️';
+            
+            card.appendChild(front);
+            card.appendChild(back);
+            
+            card.onclick = () => this.flipCard(card);
+            grid.appendChild(card);
+        });
+
+        // Timer
+        this.interval = setInterval(() => {
+            this.timer--;
+            document.getElementById('mem-timer').textContent = `時間: ${this.timer}s`;
+            if (this.timer <= 0) this.end(false);
+        }, 1000);
+        
+        document.getElementById('mem-score').textContent = `配對: 0/15`;
+    },
+
+    flipCard(card) {
+        if (this.isLocked || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+        
+        card.classList.add('flipped');
+        this.flippedCards.push(card);
+        
+        if (this.flippedCards.length === 2) {
+            this.checkMatch();
+        }
+    },
+
+    checkMatch() {
+        this.isLocked = true;
+        const [c1, c2] = this.flippedCards;
+        const match = c1.dataset.id === c2.dataset.id;
+        
+        if (match) {
+            this.matches++;
+            this.score += 10; // 每對10分
+            document.getElementById('mem-score').textContent = `配對: ${this.matches}/15`;
+            setTimeout(() => {
+                c1.classList.add('matched');
+                c2.classList.add('matched');
+                this.resetBoard();
+                if (this.matches === 15) this.end(true);
+            }, 500);
+        } else {
+            setTimeout(() => {
+                c1.classList.remove('flipped');
+                c2.classList.remove('flipped');
+                this.resetBoard();
+            }, 1000);
+        }
+    },
+
+    resetBoard() {
+        this.flippedCards = [];
+        this.isLocked = false;
+    },
+
+    end(win) {
+        clearInterval(this.interval);
+        // Bonus for time left
+        if (win) this.score += this.timer; 
+        
+        let msg = win ? `恭喜全數配對！\n獲得 ${this.score} 分` : `時間到！\n獲得 ${this.score} 分`;
+        alert(msg);
+        app.finishMiniGame(this.score, 'minigame_lv11', '記憶殿堂');
     }
 };
 
-const miniGame = MiniGame;
-
-
-const App = {
+const app = {
     // 狀態
     state: {
         user: null, // {class, seat, name}
@@ -720,13 +798,15 @@ const App = {
         usedItem: null, // 當前題目使用的道具
         config: {
             tags: ['個資', 'CIA', '釣魚', '3A4D'] // 預設全選
-        }
+        },
+        miniGameScores: { whack: 0, memory: 0 } // 紀錄各個小遊戲分數
     },
 
     // 初始化
     init() {
         this.loadTeacherConfig();
-        miniGame.init(); // 初始化小遊戲
+        miniGame.init();
+        memoryGame.init();
         // 確保按鈕事件綁定
         const loginInput = document.getElementById('login-class');
         if(loginInput) loginInput.focus();
@@ -782,6 +862,7 @@ const App = {
     startGame() {
         this.state.level = 0;
         this.state.score = 0;
+        this.state.miniGameScores = { whack: 0, memory: 0 }; // 重置
         this.state.inventory = { firewall: 2, scroll: 2, lens: 2, log: 2 };
         this.state.history = [];
         this.state.currentRunId = Date.now().toString(36);
@@ -813,38 +894,50 @@ const App = {
 
     // 載入關卡
     loadLevel() {
-        if (this.state.level >= 10) {
+        // 修改：現在總關卡數為 11 關 (0~10)
+        // Level 11 is special memory game
+        if (this.state.level > 10) {
             this.endGame();
             return;
         }
 
         const levelIdx = this.state.level;
-        const q = this.state.currentQuestions[levelIdx];
+        // 如果是第11關 (index 10)，用最後一個 scenario，不從 question pool 取題
+        const scenario = GAME_SCENARIOS[levelIdx] || GAME_SCENARIOS[GAME_SCENARIOS.length - 1];
+        
+        let q = null;
+        if (levelIdx < 10) {
+            q = this.state.currentQuestions[levelIdx];
+        } else {
+            // 虛擬題目物件給最後一關
+            q = { type: 'special', text: '最終試煉', answer: '', explanation: '' };
+        }
+        
         this.state.currentQ = q;
-        this.state.usedItem = null; // 重置本題道具使用
+        this.state.usedItem = null; 
 
         // UI 更新
-        document.getElementById('game-level').textContent = `關卡 ${levelIdx + 1}/10`;
+        document.getElementById('game-level').textContent = `關卡 ${levelIdx + 1}/11`;
         document.getElementById('game-score').textContent = `🏆 ${this.state.score}`;
-        document.getElementById('progress-fill').style.width = `${(levelIdx / 10) * 100}%`;
+        document.getElementById('progress-fill').style.width = `${(levelIdx / 11) * 100}%`;
 
-        // 隱藏小遊戲區，重置一般題目區
+        // 隱藏所有小遊戲區，重置一般題目區
         document.getElementById('minigame-container').style.display = 'none';
+        document.getElementById('memory-game-container').style.display = 'none';
+        document.getElementById('quiz-area').style.display = 'none';
+        document.getElementById('scene-area').style.display = 'block';
         
         // 載入劇情
-        const scenario = GAME_SCENARIOS[levelIdx] || GAME_SCENARIOS[0];
         document.getElementById('story-text').textContent = scenario.text;
         document.getElementById('npc-name').textContent = scenario.npc;
         document.getElementById('npc-msg').textContent = scenario.msg;
-        document.getElementById('npc-avatar').textContent = ['👨‍🏫','🧚‍♀️','🦹','🤖'][levelIdx % 4]; // 隨機頭像
+        document.getElementById('npc-avatar').textContent = ['👨‍🏫','🧚‍♀️','🦹','🤖'][levelIdx % 4]; 
 
         // NPC 選項 / 互動小測驗
         const choicesDiv = document.getElementById('npc-choices');
         choicesDiv.innerHTML = '';
         
-        // 渲染互動測驗按鈕
         if (scenario.quiz && scenario.quiz.options) {
-            // 隨機排列選項按鈕
             let opts = [...scenario.quiz.options];
             opts.sort(() => Math.random() - 0.5);
             
@@ -853,75 +946,59 @@ const App = {
                 btn.className = 'btn btn-small btn-secondary';
                 btn.textContent = opt;
                 btn.onclick = () => {
-                    // 檢查答案
                     if (opt === scenario.quiz.answer) {
-                        // 答對，進入題目 (或小遊戲)
                         document.getElementById('scene-area').style.display = 'none';
-                        
-                        // 判斷是否為特殊關卡 (射擊遊戲)
                         if (scenario.special === 'shooting') {
-                             this.showMiniGame();
+                             this.showMiniGame('whack');
+                        } else if (scenario.special === 'memory') {
+                             this.showMiniGame('memory');
                         } else {
                              this.showQuestion();
                         }
-
                     } else {
-                        // 答錯，提示
                         alert('❌ 觀念有點小誤差喔！\n\n' + scenario.npc + ' 表示：「再想一想，這樣做真的安全嗎？」');
                     }
                 };
                 choicesDiv.appendChild(btn);
             });
-        } else {
-            // 舊版兼容 (若無 quiz 設定)
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-small btn-secondary';
-            btn.textContent = '我知道了，進入挑戰';
-            btn.onclick = () => {
-                document.getElementById('scene-area').style.display = 'none';
-                if (scenario.special === 'shooting') {
-                     this.showMiniGame();
-                } else {
-                     this.showQuestion();
-                }
-            };
-            choicesDiv.appendChild(btn);
         }
 
-        document.getElementById('scene-area').style.display = 'block';
-        document.getElementById('quiz-area').style.display = 'none';
-        
-        // 重置道具按鈕狀態 (如果是選擇題才可用防火牆)
+        // 重置道具
         this.updateInventoryUI();
     },
 
-    showMiniGame() {
+    showMiniGame(type) {
         document.getElementById('quiz-area').style.display = 'none';
-        document.getElementById('minigame-container').style.display = 'block';
-        document.getElementById('mg-start-overlay').style.display = 'flex'; // 顯示開始遮罩
+        if (type === 'whack') {
+            document.getElementById('minigame-container').style.display = 'block';
+            document.getElementById('mg-start-overlay').style.display = 'flex';
+        } else if (type === 'memory') {
+            document.getElementById('memory-game-container').style.display = 'block';
+            document.getElementById('mem-start-overlay').style.display = 'block';
+        }
     },
 
-    finishMiniGame(score) {
+    finishMiniGame(score, id, name) {
         // 小遊戲結束處理
-        // 加分
         if (score > 0) this.state.score += score;
         
-        // 紀錄這一關 (模擬一個 Question 紀錄，方便後台查看)
+        if (id === 'minigame_lv5') this.state.miniGameScores.whack = score;
+        if (id === 'minigame_lv11') this.state.miniGameScores.memory = score;
+
         this.state.history.push({
-            qId: 'minigame_lv5',
-            qText: '【打地鼠挑戰】修補系統漏洞',
+            qId: id,
+            qText: `【小遊戲】${name}`,
             type: 'minigame',
             studentAnswer: `得分 ${score}`,
             correctAnswer: 'N/A',
-            isCorrect: score >= 50, // 50分算及格
-            timeSpent: 20,
+            isCorrect: score >= 50,
+            timeSpent: 60,
             itemUsed: '',
             scoreAfter: this.state.score,
-            explanation: '主動防禦是資安的重要一環！即時修補漏洞並清除威脅。',
-            rawScore: score // 這裡多存一個 rawScore 以便後續提取
+            explanation: '實作挑戰！',
+            rawScore: score 
         });
 
-        // 直接進入下一關
         this.state.level++;
         this.loadLevel();
     },
@@ -942,7 +1019,6 @@ const App = {
 
         if (q.type === 'choice' || q.type === 'boolean') {
             let options = q.type === 'choice' ? [...q.options] : ['O (True)', 'X (False)'];
-            // 如果是選擇題，隨機排列選項 (是非題不排)
             if (q.type === 'choice') options.sort(() => Math.random() - 0.5);
 
             options.forEach(opt => {
@@ -971,37 +1047,36 @@ const App = {
     useItem(type) {
         if (this.state.inventory[type] <= 0) return;
         const q = this.state.currentQ;
-        const btns = document.querySelectorAll('.option-btn');
+        
         // 小遊戲時不能用道具
-        if (document.getElementById('minigame-container').style.display === 'block') {
-            alert("戰鬥中無法使用道具！專心修補漏洞！");
+        if (document.getElementById('minigame-container').style.display === 'block' || 
+            document.getElementById('memory-game-container').style.display === 'block') {
+            alert("戰鬥/挑戰中無法使用道具！");
             return;
         }
 
+        const btns = document.querySelectorAll('.option-btn');
+
         if (type === 'firewall') {
             if (q.type !== 'choice') { alert('防火牆只能用於選擇題！'); return; }
-            // 刪除一個錯誤選項
             let wrongBtns = Array.from(btns).filter(b => b.textContent !== q.answer && !b.classList.contains('hidden-opt'));
             if (wrongBtns.length > 0) {
                 wrongBtns[0].classList.add('hidden-opt');
                 this.consumeItem(type);
             }
         } else if (type === 'scroll') {
-            // 提示
             let hint = '';
             if (q.type === 'fill') hint = `提示：答案包含「${Array.isArray(q.answer)?q.answer[0][0]:q.answer[0]}...」`;
             else hint = `提示：與「${q.tags.join(',')}」相關概念。`;
             alert(`📜 加密卷軸解密：\n${hint}\n\n(仔細看題目的關鍵字！)`);
             this.consumeItem(type);
         } else if (type === 'lens') {
-            // 檢查清單
             alert(`🔍 釣魚偵測鏡掃描中...\n\n檢查清單：\n1. 來源是否可信？\n2. 網址是否正確？\n3. 是否製造緊急感？\n\n(本題考點：${q.tags.join('/')})`);
             this.consumeItem(type);
         } else if (type === 'log') {
-            // 標記本題結束後顯示詳細
             alert('🧾 已啟用稽核紀錄。\n本題作答後將顯示詳細解析！');
-            this.state.inventory[type]--; // 這裡先扣，因為是狀態標記
-            this.state.usedItem = 'log'; // 覆蓋之前的道具紀錄 (簡化邏輯)
+            this.state.inventory[type]--;
+            this.state.usedItem = 'log';
             this.updateInventoryUI();
         }
     },
@@ -1025,14 +1100,12 @@ const App = {
                 btn.disabled = false;
             }
         }
-        // 特殊處理：防火牆只能在選擇題
         if (this.state.currentQ && this.state.currentQ.type !== 'choice') {
              document.getElementById('item-firewall').disabled = true;
              document.getElementById('item-firewall').classList.remove('available');
         }
     },
 
-    // 提交答案
     submitAnswer(inputAnswer = null) {
         clearInterval(this.state.timerInterval);
         const q = this.state.currentQ;
@@ -1042,7 +1115,6 @@ const App = {
             inputAnswer = document.getElementById('q-input').value.trim();
         }
 
-        // 判斷對錯
         let isCorrect = false;
         if (q.type === 'choice') {
             isCorrect = (inputAnswer === q.answer);
@@ -1050,14 +1122,12 @@ const App = {
             const boolAns = q.answer ? 'O (True)' : 'X (False)';
             isCorrect = (inputAnswer === boolAns);
         } else if (q.type === 'fill') {
-            // 填充題支援多個正確答案 (陣列)
             const userText = inputAnswer.toLowerCase();
             isCorrect = q.answer.some(ans => userText.includes(ans.toLowerCase()));
         }
 
         if (isCorrect) this.state.score += 10;
 
-        // 紀錄
         this.state.history.push({
             qId: q.id,
             qText: q.text,
@@ -1071,7 +1141,6 @@ const App = {
             explanation: q.explanation
         });
 
-        // 顯示回饋
         const modal = document.getElementById('feedback-modal');
         const icon = document.getElementById('fb-icon');
         const title = document.getElementById('fb-title');
@@ -1084,7 +1153,6 @@ const App = {
         title.className = isCorrect ? 'correct' : 'wrong';
         msg.textContent = q.explanation;
 
-        // 稽核紀錄道具效果
         if (this.state.usedItem === 'log') {
             auditArea.style.display = 'block';
             document.getElementById('audit-text').textContent = `
@@ -1103,27 +1171,21 @@ const App = {
         this.loadLevel();
     },
 
-    // 遊戲結束
     endGame() {
         this.switchScreen('screen-result');
         const correctCount = this.state.history.filter(h => h.isCorrect).length;
         const totalTime = this.state.history.reduce((a, b) => a + b.timeSpent, 0);
 
-        // 尋找是否有小遊戲紀錄
-        const miniGameRecord = this.state.history.find(h => h.type === 'minigame');
+        // 顯示小遊戲得分
+        const scores = this.state.miniGameScores;
         const miniGameScoreEl = document.getElementById('final-minigame-score');
-        if (miniGameRecord && miniGameRecord.rawScore !== undefined) {
-             miniGameScoreEl.textContent = `小遊戲得分：${miniGameRecord.rawScore}`;
-             miniGameScoreEl.style.display = 'block';
-        } else {
-             miniGameScoreEl.style.display = 'none';
-        }
+        miniGameScoreEl.textContent = `打地鼠: ${scores.whack} | 記憶翻牌: ${scores.memory}`;
+        miniGameScoreEl.style.display = 'block';
 
         document.getElementById('final-score').textContent = this.state.score;
-        document.getElementById('final-accuracy').textContent = `${correctCount * 10}%`; // 粗略估計 (因為有小遊戲可能不止10題)
+        document.getElementById('final-accuracy').textContent = `${Math.round((correctCount / this.state.history.length) * 100) || 0}%`;
         document.getElementById('final-time').textContent = `${totalTime}s`;
 
-        // 錯題列表
         const reviewDiv = document.getElementById('review-list');
         reviewDiv.innerHTML = '';
         const wrongs = this.state.history.filter(h => !h.isCorrect);
@@ -1151,13 +1213,6 @@ const App = {
     },
 
     saveRecordToStorage(totalTime) {
-        // 嘗試提取小遊戲分數
-        let mgScore = 0;
-        const miniGameRecord = this.state.history.find(h => h.type === 'minigame');
-        if (miniGameRecord && miniGameRecord.rawScore !== undefined) {
-            mgScore = miniGameRecord.rawScore;
-        }
-
         const record = {
             timestamp: new Date().toISOString(),
             runId: this.state.currentRunId,
@@ -1165,9 +1220,9 @@ const App = {
             seat: this.state.user.seat,
             name: this.state.user.name,
             score: this.state.score,
-            miniGameScore: mgScore, // 獨立保存
+            miniGameScore: (this.state.miniGameScores.whack + this.state.miniGameScores.memory),
             totalTime: totalTime,
-            itemCount: Object.values(this.state.inventory).reduce((a, b) => 2 - b + a, 0), // 粗略計算用了幾個
+            itemCount: Object.values(this.state.inventory).reduce((a, b) => 2 - b + a, 0),
             details: this.state.history
         };
 
@@ -1195,15 +1250,11 @@ const App = {
     checkTeacherPassword() {
         const input = document.getElementById('teacher-pwd-input');
         const pwd = input.value;
-
-        // 簡單的雜湊函數，避免密碼明文直接暴露在原始碼中
-        // 目標密碼: 0426 -> hash: 1481544
         const checkHash = (s) => {
             let h = 0;
             for(let i=0; i<s.length; i++) {
-                // (h << 5) - h 等同於 h * 31
                 h = ((h << 5) - h) + s.charCodeAt(i);
-                h |= 0; // 轉為 32bit 整數
+                h |= 0;
             }
             return h;
         };
@@ -1225,8 +1276,6 @@ const App = {
         const filter = document.getElementById('dash-search').value.toLowerCase();
         
         tbody.innerHTML = '';
-        
-        // 排序：最新的在最上面
         const sorted = data.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
 
         sorted.forEach((r, idx) => {
@@ -1248,8 +1297,6 @@ const App = {
 
     showDetail(idx) {
         const data = JSON.parse(localStorage.getItem('edu_security_game_history') || '[]');
-        // 因為 render 時有 sort，這裡要重新找或者簡單點：render時把原始index存進去。
-        // 為簡化，這裡重新 sort 一次以匹配 index (在真實專案中應該用 ID)
         const sorted = data.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
         const record = sorted[idx];
         
@@ -1258,9 +1305,8 @@ const App = {
         detailDiv.style.display = 'block';
         
         let html = `<p><strong>${record.class} ${record.name}</strong> (總分: ${record.score}`;
-        // 如果有小遊戲分數，顯示出來
         if (record.miniGameScore !== undefined) {
-             html += ` | 小遊戲: ${record.miniGameScore}`;
+             html += ` | 小遊戲總分: ${record.miniGameScore}`;
         }
         html += `)</p>`;
         
@@ -1278,7 +1324,6 @@ const App = {
         });
         html += `</table>`;
         contentDiv.innerHTML = html;
-        // 滾動到底部
         detailDiv.scrollIntoView({behavior: 'smooth'});
     },
 
@@ -1286,16 +1331,12 @@ const App = {
         const data = JSON.parse(localStorage.getItem('edu_security_game_history') || '[]');
         if (data.length === 0) { alert('無資料可匯出'); return; }
 
-        // CSV Header
-        let csvContent = '\uFEFF'; // BOM for Excel
-        csvContent += "Timestamp,Class,Seat,Name,RunID,Level,Q_ID,Type,Question,StudentAnswer,CorrectAnswer,IsCorrect,TimeSpent,ItemUsed,ScoreAfter,MiniGameScore\n";
+        let csvContent = '\uFEFF'; 
+        csvContent += "Timestamp,Class,Seat,Name,RunID,Level,Q_ID,Type,Question,StudentAnswer,CorrectAnswer,IsCorrect,TimeSpent,ItemUsed,ScoreAfter,MiniGameTotal\n";
 
         data.forEach(run => {
-            // 該次遊玩的總小遊戲得分 (如果有的話)
             const mgScore = run.miniGameScore || 0;
-
             run.details.forEach((d, i) => {
-                // 處理逗號避免 CSV 格式跑掉
                 const safeQ = `"${d.qText.replace(/"/g, '""')}"`;
                 const safeAns = `"${d.studentAnswer.replace(/"/g, '""')}"`;
                 
@@ -1315,7 +1356,7 @@ const App = {
                     d.timeSpent,
                     d.itemUsed,
                     d.scoreAfter,
-                    mgScore // 每一行都附帶該次的小遊戲總分方便老師查看
+                    mgScore
                 ].join(",");
                 csvContent += row + "\n";
             });
@@ -1343,7 +1384,6 @@ const App = {
     }
 };
 
-const app = App;
 window.onload = () => app.init();
 
 </script>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>資安勇者：校園資料守護戰v1.41</title>
+    <title>資安勇者：校園資料守護戰v1.42</title>
     <!-- 
         GitHub Pages 部署 3 步驟：
         1. 建立 GitHub Repository。
@@ -121,7 +121,7 @@
         }
         .memory-grid {
             display: grid;
-            grid-template-columns: repeat(6, 1fr); /* 6 cols for desktop */
+            grid-template-columns: repeat(5, 1fr); /* 5 cols for 20 cards (5x4) */
             gap: 8px;
             perspective: 1000px;
         }
@@ -143,7 +143,7 @@
             display: flex; align-items: center; justify-content: center;
             border-radius: 8px;
             padding: 5px; text-align: center;
-            font-size: 0.75rem; /* Small font for content */
+            font-size: 0.8rem; /* Slightly larger font */
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             border: 2px solid #ddd;
         }
@@ -152,8 +152,8 @@
         
         /* Mobile adjustment for grid */
         @media (max-width: 600px) {
-            .memory-grid { grid-template-columns: repeat(5, 1fr); } /* 5 cols on mobile */
-            .memory-face { font-size: 0.65rem; }
+            .memory-grid { grid-template-columns: repeat(4, 1fr); } /* 4 cols on mobile (4x5) */
+            .memory-face { font-size: 0.7rem; }
         }
 
         /* Animations */
@@ -276,12 +276,12 @@
             <div id="memory-game-container">
                 <div class="memory-info">
                     <span id="mem-timer">時間: 60s</span>
-                    <span id="mem-score">配對: 0/15</span>
+                    <span id="mem-score">配對: 0/10</span>
                 </div>
                 <!-- 遮罩說明 -->
                 <div id="mem-start-overlay" style="background:#f0f9ff; padding:20px; border-radius:8px; text-align:center; border:2px dashed var(--primary); margin-bottom:20px;">
                     <h3 style="color:var(--primary)">🧠 最終試煉：個資記憶殿堂</h3>
-                    <p style="margin:10px 0; color:#555;">翻牌配對正確的「名詞」與「定義/範例」。<br>共 30 張牌 (15對)，限時 60 秒！</p>
+                    <p style="margin:10px 0; color:#555;">翻牌配對正確的「名詞」與「定義/範例」。<br>共 20 張牌 (10對)，限時 60 秒！</p>
                     <button class="btn" style="width:auto" onclick="memoryGame.start()">開始挑戰</button>
                 </div>
                 
@@ -529,7 +529,7 @@ const GAME_SCENARIOS = [
     { 
         text: '恭喜通過所有考驗！但要成為真正的守護者，必須將「個資保護原則」銘記在心。進入記憶殿堂吧！', 
         npc: '資安精靈', 
-        msg: '這是最後的試煉！將 30 張卡牌正確配對，證明你對個資法的理解！', 
+        msg: '這是最後的試煉！將 20 張卡牌正確配對，證明你對個資法的理解！', 
         special: 'memory', 
         quiz: { options: ['我準備好了！', '好緊張'], answer: '我準備好了！' }
     }
@@ -659,13 +659,8 @@ const memoryGame = {
         { term: "告知", desc: "事前說明目的" },
         { term: "同意", desc: "取得當事人授權" },
         { term: "查詢權", desc: "閱覽自己的資料" },
-        { term: "複製權", desc: "製給資料複本" },
         { term: "更正權", desc: "修改不正確資料" },
-        { term: "刪除權", desc: "請求停止利用或刪除" },
-        { term: "特定目的", desc: "蒐集須有明確用途" },
-        { term: "比例原則", desc: "不過度蒐集資料" },
-        { term: "安全維護", desc: "加密與存取控制" },
-        { term: "合法性", desc: "符合法律且必要" }
+        { term: "刪除權", desc: "請求停止利用或刪除" }
     ],
     timer: 60,
     matches: 0,
@@ -680,6 +675,11 @@ const memoryGame = {
     },
 
     start() {
+        document.getElementById('mem-start-overlay').innerHTML = `
+            <h3 style="color:var(--primary)">🧠 最終試煉：個資記憶殿堂</h3>
+            <p style="margin:10px 0; color:#555;">翻牌配對正確的「名詞」與「定義/範例」。<br>共 20 張牌 (10對)，限時 60 秒！</p>
+            <button class="btn" style="width:auto" onclick="memoryGame.start()">開始挑戰</button>
+        `;
         document.getElementById('mem-start-overlay').style.display = 'none';
         const grid = document.getElementById('memory-grid');
         grid.innerHTML = '';
@@ -689,7 +689,7 @@ const memoryGame = {
         this.flippedCards = [];
         this.isLocked = false;
         
-        // Create 30 cards
+        // Create 20 cards (10 pairs)
         let deck = [];
         this.pairs.forEach((p, idx) => {
             deck.push({ id: idx, content: p.term, type: 'term' });
@@ -727,7 +727,7 @@ const memoryGame = {
             if (this.timer <= 0) this.end(false);
         }, 1000);
         
-        document.getElementById('mem-score').textContent = `配對: 0/15`;
+        document.getElementById('mem-score').textContent = `配對: 0/10`;
     },
 
     flipCard(card) {
@@ -749,12 +749,12 @@ const memoryGame = {
         if (match) {
             this.matches++;
             this.score += 10; // 每對10分
-            document.getElementById('mem-score').textContent = `配對: ${this.matches}/15`;
+            document.getElementById('mem-score').textContent = `配對: ${this.matches}/10`;
             setTimeout(() => {
                 c1.classList.add('matched');
                 c2.classList.add('matched');
                 this.resetBoard();
-                if (this.matches === 15) this.end(true);
+                if (this.matches === 10) this.end(true);
             }, 500);
         } else {
             setTimeout(() => {

@@ -266,6 +266,7 @@
             
             <div style="margin: 20px 0; font-size: 1.2rem;">
                 <p>總分：<span id="final-score" style="color:var(--primary); font-weight:bold;">0</span></p>
+                <p id="final-minigame-score" style="display:none; color: #fbbf24; font-weight: bold;">小遊戲得分：0</p>
                 <p>正確率：<span id="final-accuracy">0%</span></p>
                 <p>耗時：<span id="final-time">0s</span></p>
             </div>
@@ -320,7 +321,7 @@
                             <th>班級</th>
                             <th>姓名</th>
                             <th>關卡</th>
-                            <th>分數</th>
+                            <th>總分</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -916,7 +917,8 @@ const App = {
             timeSpent: 20,
             itemUsed: '',
             scoreAfter: this.state.score,
-            explanation: '主動防禦是資安的重要一環！即時修補漏洞並清除威脅。'
+            explanation: '主動防禦是資安的重要一環！即時修補漏洞並清除威脅。',
+            rawScore: score // 這裡多存一個 rawScore 以便後續提取
         });
 
         // 直接進入下一關
@@ -1107,8 +1109,18 @@ const App = {
         const correctCount = this.state.history.filter(h => h.isCorrect).length;
         const totalTime = this.state.history.reduce((a, b) => a + b.timeSpent, 0);
 
+        // 尋找是否有小遊戲紀錄
+        const miniGameRecord = this.state.history.find(h => h.type === 'minigame');
+        const miniGameScoreEl = document.getElementById('final-minigame-score');
+        if (miniGameRecord && miniGameRecord.rawScore !== undefined) {
+             miniGameScoreEl.textContent = `小遊戲得分：${miniGameRecord.rawScore}`;
+             miniGameScoreEl.style.display = 'block';
+        } else {
+             miniGameScoreEl.style.display = 'none';
+        }
+
         document.getElementById('final-score').textContent = this.state.score;
-        document.getElementById('final-accuracy').textContent = `${correctCount * 10}%`;
+        document.getElementById('final-accuracy').textContent = `${correctCount * 10}%`; // 粗略估計 (因為有小遊戲可能不止10題)
         document.getElementById('final-time').textContent = `${totalTime}s`;
 
         // 錯題列表
@@ -1139,6 +1151,13 @@ const App = {
     },
 
     saveRecordToStorage(totalTime) {
+        // 嘗試提取小遊戲分數
+        let mgScore = 0;
+        const miniGameRecord = this.state.history.find(h => h.type === 'minigame');
+        if (miniGameRecord && miniGameRecord.rawScore !== undefined) {
+            mgScore = miniGameRecord.rawScore;
+        }
+
         const record = {
             timestamp: new Date().toISOString(),
             runId: this.state.currentRunId,
@@ -1146,6 +1165,7 @@ const App = {
             seat: this.state.user.seat,
             name: this.state.user.name,
             score: this.state.score,
+            miniGameScore: mgScore, // 獨立保存
             totalTime: totalTime,
             itemCount: Object.values(this.state.inventory).reduce((a, b) => 2 - b + a, 0), // 粗略計算用了幾個
             details: this.state.history
@@ -1237,7 +1257,13 @@ const App = {
         const contentDiv = document.getElementById('dash-detail-content');
         detailDiv.style.display = 'block';
         
-        let html = `<p><strong>${record.class} ${record.name}</strong> (總分: ${record.score})</p>`;
+        let html = `<p><strong>${record.class} ${record.name}</strong> (總分: ${record.score}`;
+        // 如果有小遊戲分數，顯示出來
+        if (record.miniGameScore !== undefined) {
+             html += ` | 小遊戲: ${record.miniGameScore}`;
+        }
+        html += `)</p>`;
+        
         html += `<table style="font-size:0.8rem"><tr><th>題目</th><th>作答</th><th>正誤</th><th>道具</th></tr>`;
         
         record.details.forEach(d => {
@@ -1262,9 +1288,12 @@ const App = {
 
         // CSV Header
         let csvContent = '\uFEFF'; // BOM for Excel
-        csvContent += "Timestamp,Class,Seat,Name,RunID,Level,Q_ID,Type,Question,StudentAnswer,CorrectAnswer,IsCorrect,TimeSpent,ItemUsed,ScoreAfter\n";
+        csvContent += "Timestamp,Class,Seat,Name,RunID,Level,Q_ID,Type,Question,StudentAnswer,CorrectAnswer,IsCorrect,TimeSpent,ItemUsed,ScoreAfter,MiniGameScore\n";
 
         data.forEach(run => {
+            // 該次遊玩的總小遊戲得分 (如果有的話)
+            const mgScore = run.miniGameScore || 0;
+
             run.details.forEach((d, i) => {
                 // 處理逗號避免 CSV 格式跑掉
                 const safeQ = `"${d.qText.replace(/"/g, '""')}"`;
@@ -1285,7 +1314,8 @@ const App = {
                     d.isCorrect ? 'TRUE' : 'FALSE',
                     d.timeSpent,
                     d.itemUsed,
-                    d.scoreAfter
+                    d.scoreAfter,
+                    mgScore // 每一行都附帶該次的小遊戲總分方便老師查看
                 ].join(",");
                 csvContent += row + "\n";
             });
